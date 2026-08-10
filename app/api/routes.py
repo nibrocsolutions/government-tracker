@@ -8,6 +8,7 @@ from app.collectors.runner import run_collection
 from app.database import get_db
 from app.models import BudgetYear, CollectionRun, NewsSource, Organization, Story
 from app.schemas import (
+    BudgetStoryLinkOut,
     BudgetYearOut,
     CollectionStatusOut,
     DashboardOut,
@@ -143,6 +144,53 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
             )
         )
 
+    budget_story_links: list[BudgetStoryLinkOut] = []
+    seen_pairs: set[tuple[str, int]] = set()
+    for story in stories:
+        topics = [t.strip() for t in (story.topics or "").split(",") if t.strip()]
+        if not topics and story.budget_relevance <= 0:
+            continue
+        # Prefer topics that map to a budget amount; otherwise keep tagged topics
+        ranked_topics = sorted(
+            topics,
+            key=lambda t: (
+                0 if budget_by_topic.get(t) is not None else 1,
+                -story.budget_relevance,
+                t,
+            ),
+        )
+        for topic in ranked_topics:
+            pair = (topic, story.id)
+            if pair in seen_pairs:
+                continue
+            seen_pairs.add(pair)
+            amount = budget_by_topic.get(topic)
+            share = (amount / total_exp * 100) if amount and total_exp else None
+            budget_story_links.append(
+                BudgetStoryLinkOut(
+                    budget_category=topic,
+                    budget_amount=amount,
+                    budget_share=round(share, 1) if share is not None else None,
+                    story_id=story.id,
+                    story_title=story.title,
+                    story_url=story.url,
+                    source_name=story.source.name if story.source else None,
+                    budget_relevance=story.budget_relevance,
+                    is_official=story.is_official,
+                    published_at=story.published_at or story.collected_at,
+                )
+            )
+            # One primary budget link per story keeps the table readable
+            break
+    budget_story_links.sort(
+        key=lambda row: (
+            -(row.budget_amount or 0),
+            -row.budget_relevance,
+            row.budget_category,
+            row.story_title.lower(),
+        )
+    )
+
     last_run = db.scalar(select(CollectionRun).order_by(desc(CollectionRun.started_at)))
     last_collection: datetime | None = None
     if last_run and last_run.finished_at:
@@ -161,6 +209,7 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
         official_stories=[StoryOut.model_validate(s) for s in official],
         external_stories=[StoryOut.model_validate(s) for s in external],
         topic_mentions=topic_mentions,
+        budget_story_links=budget_story_links[:60],
         sources=[s for s in sources],
         last_collection=last_collection,
     )

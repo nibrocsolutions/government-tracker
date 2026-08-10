@@ -1,4 +1,5 @@
 const ORG_DEFAULT = "new-hanover-county";
+const DISPLAY_TZ = "America/New_York";
 const PALETTE = ["#0a4548", "#0f6a6a", "#7eb8b0", "#c4a574", "#c45c3e", "#3a5260", "#2f7d6d", "#8b6b3f"];
 
 let charts = {
@@ -7,6 +8,9 @@ let charts = {
   change: null,
   topic: null,
 };
+
+let chartRenderToken = 0;
+let chartsReady = false;
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -26,29 +30,81 @@ function $(id) {
 }
 
 function destroyChart(key) {
-  if (charts[key]) {
+  if (key && charts[key]) {
     charts[key].destroy();
     charts[key] = null;
   }
 }
 
+function resetCanvas(id, chartKey) {
+  destroyChart(chartKey);
+  const old = $(id);
+  if (!old || !old.parentNode) return null;
+  const next = document.createElement("canvas");
+  next.id = old.id;
+  if (old.getAttribute("aria-label")) {
+    next.setAttribute("aria-label", old.getAttribute("aria-label"));
+  }
+  old.parentNode.replaceChild(next, old);
+  return next;
+}
+
+function parseUtcDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  let raw = String(value).trim().replace(" ", "T");
+  if (!/(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw)) {
+    raw += "Z";
+  }
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function formatDate(value) {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const d = parseUtcDate(value);
+  if (!d) return "—";
+  return (
+    d.toLocaleString("en-US", {
+      timeZone: DISPLAY_TZ,
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }) + " ET"
+  );
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function chartDefaults() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: chartsReady ? false : { duration: 450 },
+    resizeDelay: 100,
+    plugins: {
+      legend: {
+        labels: {
+          boxWidth: 12,
+          font: { family: "'Source Sans 3', sans-serif", size: 12 },
+          color: "#3a5260",
+        },
+      },
+    },
+  };
 }
 
 function renderStories(targetId, stories, emptyText) {
   const el = $(targetId);
   if (!stories.length) {
-    el.innerHTML = `<li class="empty">${emptyText}</li>`;
+    el.innerHTML = `<li class="empty">${escapeHtml(emptyText)}</li>`;
     return;
   }
   el.innerHTML = stories
@@ -57,7 +113,7 @@ function renderStories(targetId, stories, emptyText) {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean)
-        .map((t) => `<span class="topic-chip">${t}</span>`)
+        .map((t) => `<span class="topic-chip">${escapeHtml(t)}</span>`)
         .join("");
       const sourceName = story.source?.name || (story.is_official ? "Official" : "News");
       const relevance =
@@ -66,20 +122,21 @@ function renderStories(targetId, stories, emptyText) {
           : "";
       return `
         <li class="story-item">
-          <a href="${story.url}" target="_blank" rel="noopener">${story.title}</a>
+          <a href="${escapeHtml(story.url)}" target="_blank" rel="noopener">${escapeHtml(story.title)}</a>
           <div class="story-meta">
-            <span>${sourceName}</span>
+            <span>${escapeHtml(sourceName)}</span>
             <span>${formatDate(story.published_at || story.collected_at)}</span>
             ${relevance}
             ${topics}
           </div>
-          ${story.summary ? `<p class="story-summary">${story.summary}</p>` : ""}
+          ${story.summary ? `<p class="story-summary">${escapeHtml(story.summary)}</p>` : ""}
         </li>`;
     })
     .join("");
 }
 
 function doughnutConfig(labels, values) {
+  const defaults = chartDefaults();
   return {
     type: "doughnut",
     data: {
@@ -89,21 +146,17 @@ function doughnutConfig(labels, values) {
           data: values,
           backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]),
           borderWidth: 0,
-          hoverOffset: 6,
+          hoverOffset: 4,
         },
       ],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      ...defaults,
       plugins: {
+        ...defaults.plugins,
         legend: {
-          position: "right",
-          labels: {
-            boxWidth: 12,
-            font: { family: "'Source Sans 3', sans-serif", size: 12 },
-            color: "#3a5260",
-          },
+          ...defaults.plugins.legend,
+          position: window.matchMedia("(max-width: 860px)").matches ? "bottom" : "right",
         },
         tooltip: {
           callbacks: {
@@ -120,11 +173,11 @@ function doughnutConfig(labels, values) {
 }
 
 function renderBudgetCharts(budget) {
-  destroyChart("exp");
-  destroyChart("rev");
-  destroyChart("change");
+  const expCanvas = resetCanvas("exp-chart", "exp");
+  const revCanvas = resetCanvas("rev-chart", "rev");
+  const changeCanvas = resetCanvas("change-chart", "change");
+  if (!budget || !expCanvas || !revCanvas || !changeCanvas) return;
 
-  if (!budget) return;
   const items = budget.line_items || [];
   const expenditures = items
     .filter((i) => i.category === "expenditure")
@@ -134,21 +187,22 @@ function renderBudgetCharts(budget) {
     .sort((a, b) => a.sort_order - b.sort_order);
 
   charts.exp = new Chart(
-    $("exp-chart"),
+    expCanvas,
     doughnutConfig(
       expenditures.map((i) => i.function_name),
       expenditures.map((i) => i.amount)
     )
   );
   charts.rev = new Chart(
-    $("rev-chart"),
+    revCanvas,
     doughnutConfig(
       revenues.map((i) => i.function_name),
       revenues.map((i) => i.amount)
     )
   );
 
-  charts.change = new Chart($("change-chart"), {
+  const defaults = chartDefaults();
+  charts.change = new Chart(changeCanvas, {
     type: "bar",
     data: {
       labels: expenditures.map((i) => i.function_name),
@@ -164,8 +218,7 @@ function renderBudgetCharts(budget) {
       ],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      ...defaults,
       scales: {
         x: {
           ticks: { maxRotation: 45, minRotation: 0, color: "#3a5260" },
@@ -180,6 +233,7 @@ function renderBudgetCharts(budget) {
         },
       },
       plugins: {
+        ...defaults.plugins,
         legend: { display: false },
         tooltip: {
           callbacks: {
@@ -198,10 +252,11 @@ function renderBudgetCharts(budget) {
 }
 
 function renderTopicChart(mentions) {
-  destroyChart("topic");
-  if (!mentions.length) return;
+  const canvas = resetCanvas("topic-chart", "topic");
+  if (!canvas || !mentions.length) return;
 
-  charts.topic = new Chart($("topic-chart"), {
+  const defaults = chartDefaults();
+  charts.topic = new Chart(canvas, {
     type: "bar",
     data: {
       labels: mentions.map((m) => m.topic),
@@ -223,8 +278,7 @@ function renderTopicChart(mentions) {
       ],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      ...defaults,
       scales: {
         y: {
           position: "left",
@@ -247,9 +301,7 @@ function renderTopicChart(mentions) {
         },
       },
       plugins: {
-        legend: {
-          labels: { font: { family: "'Source Sans 3', sans-serif" }, color: "#3a5260" },
-        },
+        ...defaults.plugins,
         tooltip: {
           callbacks: {
             afterBody: (items) => {
@@ -264,6 +316,56 @@ function renderTopicChart(mentions) {
   });
 }
 
+function scheduleChartRender(budget, mentions) {
+  const token = ++chartRenderToken;
+  // Wait for layout to settle so Chart.js measures stable container sizes.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (token !== chartRenderToken) return;
+      renderBudgetCharts(budget);
+      renderTopicChart(mentions || []);
+      chartsReady = true;
+      // Force one stable resize after fonts/layout settle.
+      requestAnimationFrame(() => {
+        if (token !== chartRenderToken) return;
+        Object.values(charts).forEach((chart) => {
+          if (chart) chart.resize();
+        });
+      });
+    });
+  });
+}
+
+function renderBudgetLinks(links) {
+  const body = $("budget-links-body");
+  if (!links.length) {
+    body.innerHTML = `<tr><td colspan="6" class="empty">No budget-linked stories yet—try Refresh sources.</td></tr>`;
+    return;
+  }
+  body.innerHTML = links
+    .map((row) => {
+      const amount =
+        row.budget_amount != null
+          ? `${money.format(row.budget_amount)}${
+              row.budget_share != null ? ` (${row.budget_share}%)` : ""
+            }`
+          : "—";
+      const source = row.source_name || (row.is_official ? "Official" : "News");
+      const relevance =
+        row.budget_relevance > 0 ? `${Math.round(row.budget_relevance * 100)}%` : "—";
+      return `
+        <tr>
+          <td class="category">${escapeHtml(row.budget_category)}</td>
+          <td class="amount">${escapeHtml(amount)}</td>
+          <td><a href="${escapeHtml(row.story_url)}" target="_blank" rel="noopener">${escapeHtml(row.story_title)}</a></td>
+          <td>${escapeHtml(source)}</td>
+          <td>${escapeHtml(relevance)}</td>
+          <td>${formatDate(row.published_at)}</td>
+        </tr>`;
+    })
+    .join("");
+}
+
 function renderSources(sources) {
   const el = $("source-list");
   el.innerHTML = sources
@@ -271,8 +373,8 @@ function renderSources(sources) {
       (s) => `
       <li class="source-item">
         <div>
-          <a href="${s.url}" target="_blank" rel="noopener">${s.name}</a>
-          <div class="story-meta"><span>${s.source_type}</span></div>
+          <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a>
+          <div class="story-meta"><span>${escapeHtml(s.source_type)}</span></div>
         </div>
         <span>${s.last_collected_at ? `Last pull ${formatDate(s.last_collected_at)}` : "Not collected yet"}</span>
       </li>`
@@ -284,7 +386,7 @@ async function loadOrganizations() {
   const orgs = await fetch("/api/organizations").then((r) => r.json());
   const select = $("org-select");
   select.innerHTML = orgs
-    .map((o) => `<option value="${o.slug}">${o.short_name}</option>`)
+    .map((o) => `<option value="${escapeHtml(o.slug)}">${escapeHtml(o.short_name)}</option>`)
     .join("");
   const preferred = orgs.find((o) => o.slug === ORG_DEFAULT) || orgs[0];
   if (preferred) select.value = preferred.slug;
@@ -329,16 +431,18 @@ async function loadDashboard(slug) {
     ? `Last collection ${formatDate(data.last_collection)}`
     : "Run refresh to pull live sources";
 
-  renderBudgetCharts(budget);
-  renderTopicChart(data.topic_mentions || []);
+  // Render DOM content first, then charts after layout is stable.
   renderStories("official-stories", data.official_stories || [], "No official stories yet.");
   renderStories("external-stories", data.external_stories || [], "No external coverage yet—try Refresh sources.");
   const budgetStories = (data.recent_stories || [])
     .filter((s) => s.budget_relevance > 0)
     .sort((a, b) => b.budget_relevance - a.budget_relevance);
   renderStories("budget-stories", budgetStories, "No budget-tagged stories yet.");
+  renderBudgetLinks(data.budget_story_links || []);
   renderSources(data.sources || []);
+  scheduleChartRender(budget, data.topic_mentions || []);
 
+  document.body.classList.add("is-ready");
   $("status-line").textContent = `Showing ${org.short_name}`;
 }
 
@@ -364,6 +468,11 @@ async function boot() {
   await loadDashboard(slug);
   $("org-select").addEventListener("change", (e) => loadDashboard(e.target.value));
   $("refresh-btn").addEventListener("click", refreshSources);
+  window.addEventListener("resize", () => {
+    Object.values(charts).forEach((chart) => {
+      if (chart) chart.resize();
+    });
+  });
 }
 
 boot().catch((err) => {
