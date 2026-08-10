@@ -88,6 +88,8 @@ class BudgetStoryLinkOut(BaseModel):
     budget_relevance: float
     is_official: bool
     published_at: datetime | None = None
+    mentioned_money: str | None = None
+    mentioned_money_value: float | None = None
 
 
 class DashboardOut(BaseModel):
