@@ -716,6 +716,12 @@ async function loadDashboard(slug) {
 
   document.body.classList.add("is-ready");
   $("status-line").textContent = `Showing ${org.short_name}`;
+  // Charts in hidden tabs need a resize after first paint/layout.
+  requestAnimationFrame(() => {
+    Object.values(charts).forEach((chart) => {
+      if (chart) chart.resize();
+    });
+  });
 }
 
 async function refreshSources() {
@@ -740,6 +746,7 @@ async function boot() {
   await loadDashboard(slug);
   $("org-select").addEventListener("change", (e) => loadDashboard(e.target.value));
   $("refresh-btn").addEventListener("click", refreshSources);
+  setupSectionTabs();
   window.addEventListener("resize", () => {
     const nowMobile = isMobileLayout();
     if (nowMobile !== wasMobileLayout && lastDashboard) {
@@ -756,6 +763,57 @@ async function boot() {
       if (chart) chart.resize();
     });
   });
+}
+
+function setupSectionTabs() {
+  const tabs = Array.from(document.querySelectorAll(".section-tab"));
+  if (!tabs.length) return;
+
+  const activate = (tabId, { focusTab = false, updateHash = true } = {}) => {
+    tabs.forEach((tab) => {
+      const selected = tab.dataset.tab === tabId;
+      tab.classList.toggle("is-active", selected);
+      tab.setAttribute("aria-selected", selected ? "true" : "false");
+      tab.tabIndex = selected ? 0 : -1;
+      if (selected && focusTab) tab.focus();
+    });
+
+    document.querySelectorAll("[data-tab-panel]").forEach((panel) => {
+      const selected = panel.dataset.tabPanel === tabId;
+      panel.classList.toggle("is-active", selected);
+      panel.hidden = !selected;
+    });
+
+    if (updateHash) {
+      const url = new URL(window.location.href);
+      url.hash = tabId;
+      history.replaceState(null, "", url);
+    }
+
+    requestAnimationFrame(() => {
+      Object.values(charts).forEach((chart) => {
+        if (chart) chart.resize();
+      });
+    });
+  };
+
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => activate(tab.dataset.tab, { focusTab: false }));
+    tab.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      let next = index;
+      if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+      if (event.key === "ArrowLeft") next = (index - 1 + tabs.length) % tabs.length;
+      if (event.key === "Home") next = 0;
+      if (event.key === "End") next = tabs.length - 1;
+      activate(tabs[next].dataset.tab, { focusTab: true });
+    });
+  });
+
+  const initial = (window.location.hash || "#overview").replace("#", "");
+  const valid = tabs.some((tab) => tab.dataset.tab === initial) ? initial : "overview";
+  activate(valid, { updateHash: false });
 }
 
 boot().catch((err) => {
