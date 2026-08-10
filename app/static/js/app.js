@@ -588,10 +588,15 @@ function renderResources(resources) {
 
 function renderBudgetLinks(links) {
   const body = $("budget-links-body");
+  const mobile = $("budget-links-mobile");
   if (!links.length) {
     body.innerHTML = `<tr><td colspan="7" class="empty">No budget-linked stories yet—try Refresh sources.</td></tr>`;
+    if (mobile) {
+      mobile.innerHTML = `<li class="empty">No budget-linked stories yet—try Refresh sources.</li>`;
+    }
     return;
   }
+
   body.innerHTML = links
     .map((row) => {
       const amount =
@@ -606,14 +611,51 @@ function renderBudgetLinks(links) {
         row.budget_relevance > 0 ? `${Math.round(row.budget_relevance * 100)}%` : "—";
       return `
         <tr>
-          <td data-label="Budget category" class="category">${escapeHtml(row.budget_category)}</td>
-          <td data-label="Adopted amount" class="amount">${escapeHtml(amount)}</td>
-          <td data-label="Story"><a href="${escapeHtml(row.story_url)}" target="_blank" rel="noopener">${escapeHtml(row.story_title)}</a></td>
-          <td data-label="Mentioned $" class="amount">${escapeHtml(mentioned)}</td>
-          <td data-label="Source">${escapeHtml(source)}</td>
-          <td data-label="Relevance">${escapeHtml(relevance)}</td>
-          <td data-label="When">${formatDate(row.published_at)}</td>
+          <td class="category">${escapeHtml(row.budget_category)}</td>
+          <td class="amount">${escapeHtml(amount)}</td>
+          <td>
+            <a class="story-table-link" href="${escapeHtml(row.story_url)}" target="_blank" rel="noopener">
+              ${escapeHtml(row.story_title)}
+              <span class="story-table-link-hint">Open story ↗</span>
+            </a>
+          </td>
+          <td class="amount">${escapeHtml(mentioned)}</td>
+          <td>${escapeHtml(source)}</td>
+          <td>${escapeHtml(relevance)}</td>
+          <td>${formatDate(row.published_at)}</td>
         </tr>`;
+    })
+    .join("");
+
+  if (!mobile) return;
+  mobile.innerHTML = links
+    .map((row) => {
+      const amount =
+        row.budget_amount != null
+          ? `${money.format(row.budget_amount)}${
+              row.budget_share != null ? ` · ${row.budget_share}% of GF` : ""
+            }`
+          : "Budget amount unavailable";
+      const mentioned = row.mentioned_money || "None found";
+      const source = row.source_name || (row.is_official ? "Official" : "News");
+      const relevance =
+        row.budget_relevance > 0 ? `${Math.round(row.budget_relevance * 100)}%` : "—";
+      return `
+        <li class="news-link-card">
+          <div class="news-link-card-top">
+            <span class="topic-chip">${escapeHtml(row.budget_category)}</span>
+            <span class="topic-chip">${escapeHtml(source)}</span>
+          </div>
+          <h3 class="news-link-title">${escapeHtml(row.story_title)}</h3>
+          <div class="news-link-meta">
+            <div><strong>Adopted:</strong> ${escapeHtml(amount)}</div>
+            <div><strong>Mentioned $:</strong> ${escapeHtml(mentioned)}</div>
+            <div><strong>Relevance:</strong> ${escapeHtml(relevance)} · ${formatDate(row.published_at)}</div>
+          </div>
+          <a class="news-link-open" href="${escapeHtml(row.story_url)}" target="_blank" rel="noopener">
+            Open story
+          </a>
+        </li>`;
     })
     .join("");
 }
@@ -716,12 +758,6 @@ async function loadDashboard(slug) {
 
   document.body.classList.add("is-ready");
   $("status-line").textContent = `Showing ${org.short_name}`;
-  // Charts in hidden tabs need a resize after first paint/layout.
-  requestAnimationFrame(() => {
-    Object.values(charts).forEach((chart) => {
-      if (chart) chart.resize();
-    });
-  });
 }
 
 async function refreshSources() {
@@ -746,7 +782,6 @@ async function boot() {
   await loadDashboard(slug);
   $("org-select").addEventListener("change", (e) => loadDashboard(e.target.value));
   $("refresh-btn").addEventListener("click", refreshSources);
-  setupSectionTabs();
   window.addEventListener("resize", () => {
     const nowMobile = isMobileLayout();
     if (nowMobile !== wasMobileLayout && lastDashboard) {
@@ -763,57 +798,6 @@ async function boot() {
       if (chart) chart.resize();
     });
   });
-}
-
-function setupSectionTabs() {
-  const tabs = Array.from(document.querySelectorAll(".section-tab"));
-  if (!tabs.length) return;
-
-  const activate = (tabId, { focusTab = false, updateHash = true } = {}) => {
-    tabs.forEach((tab) => {
-      const selected = tab.dataset.tab === tabId;
-      tab.classList.toggle("is-active", selected);
-      tab.setAttribute("aria-selected", selected ? "true" : "false");
-      tab.tabIndex = selected ? 0 : -1;
-      if (selected && focusTab) tab.focus();
-    });
-
-    document.querySelectorAll("[data-tab-panel]").forEach((panel) => {
-      const selected = panel.dataset.tabPanel === tabId;
-      panel.classList.toggle("is-active", selected);
-      panel.hidden = !selected;
-    });
-
-    if (updateHash) {
-      const url = new URL(window.location.href);
-      url.hash = tabId;
-      history.replaceState(null, "", url);
-    }
-
-    requestAnimationFrame(() => {
-      Object.values(charts).forEach((chart) => {
-        if (chart) chart.resize();
-      });
-    });
-  };
-
-  tabs.forEach((tab, index) => {
-    tab.addEventListener("click", () => activate(tab.dataset.tab, { focusTab: false }));
-    tab.addEventListener("keydown", (event) => {
-      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-      event.preventDefault();
-      let next = index;
-      if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
-      if (event.key === "ArrowLeft") next = (index - 1 + tabs.length) % tabs.length;
-      if (event.key === "Home") next = 0;
-      if (event.key === "End") next = tabs.length - 1;
-      activate(tabs[next].dataset.tab, { focusTab: true });
-    });
-  });
-
-  const initial = (window.location.hash || "#overview").replace("#", "");
-  const valid = tabs.some((tab) => tab.dataset.tab === initial) ? initial : "overview";
-  activate(valid, { updateHash: false });
 }
 
 boot().catch((err) => {
