@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.collectors.runner import run_collection
 from app.database import get_db
 from app.models import BudgetYear, CollectionRun, NewsSource, Organization, Story
+from app.money import extract_mentioned_money
 from app.schemas import (
     BudgetStoryLinkOut,
     BudgetYearOut,
@@ -166,6 +167,9 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
             seen_pairs.add(pair)
             amount = budget_by_topic.get(topic)
             share = (amount / total_exp * 100) if amount and total_exp else None
+            mentioned_money, mentioned_value = extract_mentioned_money(
+                story.title, story.summary
+            )
             budget_story_links.append(
                 BudgetStoryLinkOut(
                     budget_category=topic,
@@ -178,6 +182,8 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
                     budget_relevance=story.budget_relevance,
                     is_official=story.is_official,
                     published_at=story.published_at or story.collected_at,
+                    mentioned_money=mentioned_money,
+                    mentioned_money_value=mentioned_value,
                 )
             )
             # One primary budget link per story keeps the table readable

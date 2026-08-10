@@ -339,7 +339,7 @@ function scheduleChartRender(budget, mentions) {
 function renderBudgetLinks(links) {
   const body = $("budget-links-body");
   if (!links.length) {
-    body.innerHTML = `<tr><td colspan="6" class="empty">No budget-linked stories yet—try Refresh sources.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" class="empty">No budget-linked stories yet—try Refresh sources.</td></tr>`;
     return;
   }
   body.innerHTML = links
@@ -350,6 +350,7 @@ function renderBudgetLinks(links) {
               row.budget_share != null ? ` (${row.budget_share}%)` : ""
             }`
           : "—";
+      const mentioned = row.mentioned_money || "—";
       const source = row.source_name || (row.is_official ? "Official" : "News");
       const relevance =
         row.budget_relevance > 0 ? `${Math.round(row.budget_relevance * 100)}%` : "—";
@@ -358,12 +359,29 @@ function renderBudgetLinks(links) {
           <td class="category">${escapeHtml(row.budget_category)}</td>
           <td class="amount">${escapeHtml(amount)}</td>
           <td><a href="${escapeHtml(row.story_url)}" target="_blank" rel="noopener">${escapeHtml(row.story_title)}</a></td>
+          <td class="amount">${escapeHtml(mentioned)}</td>
           <td>${escapeHtml(source)}</td>
           <td>${escapeHtml(relevance)}</td>
           <td>${formatDate(row.published_at)}</td>
         </tr>`;
     })
     .join("");
+}
+
+function renderOfficialStories(stories) {
+  const panel = $("official-stories-panel");
+  const grid = $("stories-grid");
+  if (!stories.length) {
+    panel.hidden = true;
+    panel.setAttribute("aria-hidden", "true");
+    grid.classList.add("single-column");
+    $("official-stories").innerHTML = "";
+    return;
+  }
+  panel.hidden = false;
+  panel.removeAttribute("aria-hidden");
+  grid.classList.remove("single-column");
+  renderStories("official-stories", stories, "No official stories yet.");
 }
 
 function renderSources(sources) {
@@ -432,7 +450,7 @@ async function loadDashboard(slug) {
     : "Run refresh to pull live sources";
 
   // Render DOM content first, then charts after layout is stable.
-  renderStories("official-stories", data.official_stories || [], "No official stories yet.");
+  renderOfficialStories(data.official_stories || []);
   renderStories("external-stories", data.external_stories || [], "No external coverage yet—try Refresh sources.");
   const budgetStories = (data.recent_stories || [])
     .filter((s) => s.budget_relevance > 0)

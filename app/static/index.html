@@ -61,7 +61,7 @@
         <p class="lede" id="budget-notes"></p>
       </section>
 
-      <section class="charts-grid">
+      <section class="charts-grid pies-grid">
         <article class="panel chart-panel">
           <div class="panel-head">
             <h2>Expenditures by function</h2>
@@ -80,6 +80,36 @@
             <canvas id="rev-chart" aria-label="Revenue pie chart"></canvas>
           </div>
         </article>
+      </section>
+
+      <section class="panel" id="budget-links-panel">
+        <div class="panel-head">
+          <h2>Budget ↔ news links</h2>
+          <p>Stories matched to budget categories with links to the source</p>
+        </div>
+        <div class="table-scroll">
+          <table class="links-table" id="budget-links-table">
+            <thead>
+              <tr>
+                <th scope="col">Budget category</th>
+                <th scope="col">Adopted amount</th>
+                <th scope="col">Story</th>
+                <th scope="col">Mentioned $</th>
+                <th scope="col">Source</th>
+                <th scope="col">Relevance</th>
+                <th scope="col">When</th>
+              </tr>
+            </thead>
+            <tbody id="budget-links-body">
+              <tr>
+                <td colspan="7" class="empty">Loading…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="charts-grid bars-grid">
         <article class="panel chart-panel wide">
           <div class="panel-head">
             <h2>Year-over-year change</h2>
@@ -100,47 +130,21 @@
         </article>
       </section>
 
-      <section class="stories-grid">
-        <article class="panel">
+      <section class="stories-grid" id="stories-grid">
+        <article class="panel" id="official-stories-panel" hidden>
           <div class="panel-head">
             <h2>Official county updates</h2>
             <p>From nhcgov.com and budget pages</p>
           </div>
           <ul class="story-list" id="official-stories"></ul>
         </article>
-        <article class="panel">
+        <article class="panel" id="external-stories-panel">
           <div class="panel-head">
             <h2>Local &amp; outside coverage</h2>
             <p>WHQR, Port City Daily, WECT, Google News, and more</p>
           </div>
           <ul class="story-list" id="external-stories"></ul>
         </article>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <h2>Budget ↔ news links</h2>
-          <p>Stories matched to budget categories with links to the source</p>
-        </div>
-        <div class="table-scroll">
-          <table class="links-table" id="budget-links-table">
-            <thead>
-              <tr>
-                <th scope="col">Budget category</th>
-                <th scope="col">Adopted amount</th>
-                <th scope="col">Story</th>
-                <th scope="col">Source</th>
-                <th scope="col">Relevance</th>
-                <th scope="col">When</th>
-              </tr>
-            </thead>
-            <tbody id="budget-links-body">
-              <tr>
-                <td colspan="6" class="empty">Loading…</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </section>
 
       <section class="panel">

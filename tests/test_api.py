@@ -31,6 +31,7 @@ def test_organizations_and_dashboard():
             assert "budget_category" in link
             assert "story_url" in link
             assert "story_title" in link
+            assert "mentioned_money" in link
 
 
 def test_homepage():
@@ -40,3 +41,9 @@ def test_homepage():
         assert b"Government Tracker" in response.content
         assert b"budget-links-table" in response.content
         assert b"Budget" in response.content and b"news links" in response.content
+        assert b"Mentioned $" in response.content
+        assert b"official-stories-panel" in response.content
+        # Table should appear before the YoY bar chart section
+        html = response.text
+        assert html.index("budget-links-panel") < html.index("change-chart")
+        assert html.index("exp-chart") < html.index("budget-links-panel")
