@@ -440,22 +440,43 @@ function renderDestinations(items, total) {
     body.innerHTML = `<tr><td colspan="4" class="empty">Department destinations not loaded yet.</td></tr>`;
     return;
   }
-  body.innerHTML = items
-    .map((item) => {
-      const share = total ? ((item.amount / total) * 100).toFixed(1) + "%" : "—";
-      const yoy =
-        item.pct_change != null
-          ? `${item.pct_change > 0 ? "+" : ""}${item.pct_change}%`
-          : "—";
-      return `
-        <tr>
-          <td class="category">${escapeHtml(item.function_name)}</td>
-          <td class="amount">${escapeHtml(money.format(item.amount))}</td>
-          <td class="amount">${escapeHtml(share)}</td>
-          <td>${escapeHtml(yoy)}</td>
-        </tr>`;
-    })
-    .join("");
+  const rows = items.map((item) => {
+    const share = total ? ((item.amount / total) * 100).toFixed(1) + "%" : "—";
+    const yoy =
+      item.pct_change != null
+        ? `${item.pct_change > 0 ? "+" : ""}${item.pct_change}%`
+        : "—";
+    return `
+      <tr>
+        <td class="category">${escapeHtml(item.function_name)}</td>
+        <td class="amount">${escapeHtml(money.format(item.amount))}</td>
+        <td class="amount">${escapeHtml(share)}</td>
+        <td>${escapeHtml(yoy)}</td>
+      </tr>`;
+  });
+
+  const listedTotal = items.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const listedPrior = items.reduce(
+    (sum, item) => sum + (item.prior_amount != null ? item.prior_amount : 0),
+    0
+  );
+  const hasPriors = items.some((item) => item.prior_amount != null);
+  const listedShare = total ? ((listedTotal / total) * 100).toFixed(1) + "%" : "—";
+  let listedYoy = "—";
+  if (hasPriors && listedPrior > 0) {
+    const pct = ((listedTotal - listedPrior) / listedPrior) * 100;
+    listedYoy = `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`;
+  }
+
+  rows.push(`
+    <tr class="totals-row">
+      <td class="category">Total (listed destinations)</td>
+      <td class="amount">${escapeHtml(money.format(listedTotal))}</td>
+      <td class="amount">${escapeHtml(listedShare)}</td>
+      <td>${escapeHtml(listedYoy)}</td>
+    </tr>`);
+
+  body.innerHTML = rows.join("");
 }
 
 function renderResources(resources) {

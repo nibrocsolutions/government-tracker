@@ -65,3 +65,15 @@ def test_homepage():
         assert html.index("exp-chart") < html.index("budget-links-panel")
         assert html.index("fiscal-balance-panel") < html.index("destinations-panel")
         assert html.index("destinations-panel") < html.index("budget-links-panel")
+        assert b"destinations-body" in response.content
+
+
+def test_destinations_include_amounts_for_totals():
+    with TestClient(app) as client:
+        data = client.get("/api/organizations/new-hanover-county/dashboard").json()
+        destinations = data["top_destinations"]
+        assert destinations
+        assert all("amount" in row for row in destinations)
+        assert sum(row["amount"] for row in destinations) > 0
+        # prior amounts support the totals-row YoY calculation in the UI
+        assert any(row.get("prior_amount") is not None for row in destinations)
