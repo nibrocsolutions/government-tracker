@@ -12,6 +12,8 @@ let charts = {
 
 let chartRenderToken = 0;
 let chartsReady = false;
+let lastDashboard = null;
+let wasMobileLayout = typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false;
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -84,18 +86,25 @@ function escapeHtml(text) {
     .replaceAll('"', "&quot;");
 }
 
+function isMobileLayout() {
+  return window.matchMedia("(max-width: 720px)").matches;
+}
+
 function chartDefaults() {
+  const mobile = isMobileLayout();
   return {
     responsive: true,
     maintainAspectRatio: false,
-    animation: chartsReady ? false : { duration: 450 },
+    animation: chartsReady ? false : { duration: mobile ? 0 : 450 },
     resizeDelay: 100,
     plugins: {
       legend: {
         labels: {
-          boxWidth: 12,
-          font: { family: "'Source Sans 3', sans-serif", size: 12 },
+          boxWidth: mobile ? 10 : 12,
+          boxHeight: mobile ? 10 : 12,
+          font: { family: "'Source Sans 3', sans-serif", size: mobile ? 11 : 12 },
           color: "#3a5260",
+          padding: mobile ? 10 : 12,
         },
       },
     },
@@ -157,7 +166,7 @@ function doughnutConfig(labels, values) {
         ...defaults.plugins,
         legend: {
           ...defaults.plugins.legend,
-          position: window.matchMedia("(max-width: 860px)").matches ? "bottom" : "right",
+          position: isMobileLayout() ? "bottom" : "right",
         },
         tooltip: {
           callbacks: {
@@ -222,7 +231,12 @@ function renderBudgetCharts(budget) {
       ...defaults,
       scales: {
         x: {
-          ticks: { maxRotation: 45, minRotation: 0, color: "#3a5260" },
+          ticks: {
+            maxRotation: isMobileLayout() ? 60 : 45,
+            minRotation: isMobileLayout() ? 30 : 0,
+            color: "#3a5260",
+            font: { size: isMobileLayout() ? 10 : 12 },
+          },
           grid: { display: false },
         },
         y: {
@@ -448,10 +462,10 @@ function renderDestinations(items, total) {
         : "—";
     return `
       <tr>
-        <td class="category">${escapeHtml(item.function_name)}</td>
-        <td class="amount">${escapeHtml(money.format(item.amount))}</td>
-        <td class="amount">${escapeHtml(share)}</td>
-        <td>${escapeHtml(yoy)}</td>
+        <td data-label="Destination" class="category">${escapeHtml(item.function_name)}</td>
+        <td data-label="Adopted" class="amount">${escapeHtml(money.format(item.amount))}</td>
+        <td data-label="Share of GF" class="amount">${escapeHtml(share)}</td>
+        <td data-label="YoY change">${escapeHtml(yoy)}</td>
       </tr>`;
   });
 
@@ -470,10 +484,10 @@ function renderDestinations(items, total) {
 
   rows.push(`
     <tr class="totals-row">
-      <td class="category">Total (listed destinations)</td>
-      <td class="amount">${escapeHtml(money.format(listedTotal))}</td>
-      <td class="amount">${escapeHtml(listedShare)}</td>
-      <td>${escapeHtml(listedYoy)}</td>
+      <td data-label="Destination" class="category">Total (listed destinations)</td>
+      <td data-label="Adopted" class="amount">${escapeHtml(money.format(listedTotal))}</td>
+      <td data-label="Share of GF" class="amount">${escapeHtml(listedShare)}</td>
+      <td data-label="YoY change">${escapeHtml(listedYoy)}</td>
     </tr>`);
 
   body.innerHTML = rows.join("");
@@ -527,13 +541,13 @@ function renderBudgetLinks(links) {
         row.budget_relevance > 0 ? `${Math.round(row.budget_relevance * 100)}%` : "—";
       return `
         <tr>
-          <td class="category">${escapeHtml(row.budget_category)}</td>
-          <td class="amount">${escapeHtml(amount)}</td>
-          <td><a href="${escapeHtml(row.story_url)}" target="_blank" rel="noopener">${escapeHtml(row.story_title)}</a></td>
-          <td class="amount">${escapeHtml(mentioned)}</td>
-          <td>${escapeHtml(source)}</td>
-          <td>${escapeHtml(relevance)}</td>
-          <td>${formatDate(row.published_at)}</td>
+          <td data-label="Budget category" class="category">${escapeHtml(row.budget_category)}</td>
+          <td data-label="Adopted amount" class="amount">${escapeHtml(amount)}</td>
+          <td data-label="Story"><a href="${escapeHtml(row.story_url)}" target="_blank" rel="noopener">${escapeHtml(row.story_title)}</a></td>
+          <td data-label="Mentioned $" class="amount">${escapeHtml(mentioned)}</td>
+          <td data-label="Source">${escapeHtml(source)}</td>
+          <td data-label="Relevance">${escapeHtml(relevance)}</td>
+          <td data-label="When">${formatDate(row.published_at)}</td>
         </tr>`;
     })
     .join("");
@@ -591,6 +605,7 @@ async function loadDashboard(slug) {
 
   const org = data.organization;
   const budget = data.current_budget;
+  lastDashboard = data;
   $("org-tagline").textContent = org.description || `Tracking ${org.name}.`;
 
   if (budget) {
@@ -661,6 +676,17 @@ async function boot() {
   $("org-select").addEventListener("change", (e) => loadDashboard(e.target.value));
   $("refresh-btn").addEventListener("click", refreshSources);
   window.addEventListener("resize", () => {
+    const nowMobile = isMobileLayout();
+    if (nowMobile !== wasMobileLayout && lastDashboard) {
+      wasMobileLayout = nowMobile;
+      scheduleChartRender(
+        lastDashboard.current_budget,
+        lastDashboard.topic_mentions || [],
+        lastDashboard.budget_history || []
+      );
+      return;
+    }
+    wasMobileLayout = nowMobile;
     Object.values(charts).forEach((chart) => {
       if (chart) chart.resize();
     });
