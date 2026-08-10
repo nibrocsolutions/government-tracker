@@ -54,168 +54,203 @@
         </div>
       </section>
 
-      <section class="panel" id="budget-notes-panel">
-        <div class="panel-head">
-          <h2>Budget snapshot</h2>
-          <a id="budget-source-link" href="#" target="_blank" rel="noopener">Official source</a>
-        </div>
-        <p class="lede" id="budget-notes"></p>
-      </section>
+      <div class="tabs-shell">
+        <nav class="section-tabs" role="tablist" aria-label="Dashboard sections">
+          <button type="button" class="section-tab is-active" role="tab" id="tab-btn-overview" aria-controls="tab-overview" aria-selected="true" data-tab="overview">
+            Overview
+          </button>
+          <button type="button" class="section-tab" role="tab" id="tab-btn-spending" aria-controls="tab-spending" aria-selected="false" data-tab="spending" tabindex="-1">
+            Spending
+          </button>
+          <button type="button" class="section-tab" role="tab" id="tab-btn-trends" aria-controls="tab-trends" aria-selected="false" data-tab="trends" tabindex="-1">
+            Trends
+          </button>
+          <button type="button" class="section-tab" role="tab" id="tab-btn-news" aria-controls="tab-news" aria-selected="false" data-tab="news" tabindex="-1">
+            News
+          </button>
+          <button type="button" class="section-tab" role="tab" id="tab-btn-sources" aria-controls="tab-sources" aria-selected="false" data-tab="sources" tabindex="-1">
+            Sources
+          </button>
+        </nav>
 
-      <section class="panel balance-panel" id="fiscal-balance-panel">
-        <div class="panel-head">
-          <h2>Deficit or surplus?</h2>
-          <p id="balance-status-pill" class="status-pill">—</p>
-        </div>
-        <p class="lede" id="balance-headline"></p>
-        <p class="lede" id="balance-detail"></p>
-        <div class="balance-metrics" id="balance-metrics"></div>
-      </section>
+        <div class="tab-panels">
+          <section class="tab-panel is-active" role="tabpanel" id="tab-overview" aria-labelledby="tab-btn-overview" data-tab-panel="overview">
+            <section class="panel" id="budget-notes-panel">
+              <div class="panel-head">
+                <h2>Budget snapshot</h2>
+                <a id="budget-source-link" href="#" target="_blank" rel="noopener">Official source</a>
+              </div>
+              <p class="lede" id="budget-notes"></p>
+            </section>
 
-      <section class="charts-grid pies-grid">
-        <article class="panel chart-panel">
-          <div class="panel-head">
-            <h2>Expenditures by function</h2>
-            <p>Where General Fund dollars go</p>
-          </div>
-          <div class="chart-wrap">
-            <canvas id="exp-chart" aria-label="Expenditures pie chart"></canvas>
-          </div>
-        </article>
-        <article class="panel chart-panel">
-          <div class="panel-head">
-            <h2>Revenue sources</h2>
-            <p>How the budget is funded</p>
-          </div>
-          <div class="chart-wrap">
-            <canvas id="rev-chart" aria-label="Revenue pie chart"></canvas>
-          </div>
-        </article>
-      </section>
+            <section class="panel balance-panel" id="fiscal-balance-panel">
+              <div class="panel-head">
+                <h2>Deficit or surplus?</h2>
+                <p id="balance-status-pill" class="status-pill">—</p>
+              </div>
+              <p class="lede" id="balance-headline"></p>
+              <p class="lede" id="balance-detail"></p>
+              <div class="balance-metrics" id="balance-metrics"></div>
+            </section>
 
-      <section class="panel" id="destinations-panel">
-        <div class="panel-head">
-          <h2>Where the money goes</h2>
-          <p>Largest FY25–26 General Fund destinations (departments &amp; major lines)</p>
-        </div>
-        <div class="table-scroll destinations-desktop">
-          <table class="links-table compact-table" id="destinations-table">
-            <thead>
-              <tr>
-                <th scope="col">Destination</th>
-                <th scope="col">Adopted</th>
-                <th scope="col">Share of GF</th>
-                <th scope="col">YoY change</th>
-              </tr>
-            </thead>
-            <tbody id="destinations-body">
-              <tr>
-                <td colspan="4" class="empty">Loading…</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <ul class="destination-cards" id="destinations-mobile" aria-label="Spending destinations"></ul>
-      </section>
+            <section class="charts-grid pies-grid">
+              <article class="panel chart-panel">
+                <div class="panel-head">
+                  <h2>Expenditures by function</h2>
+                  <p>Where General Fund dollars go</p>
+                </div>
+                <div class="chart-wrap">
+                  <canvas id="exp-chart" aria-label="Expenditures pie chart"></canvas>
+                </div>
+              </article>
+              <article class="panel chart-panel">
+                <div class="panel-head">
+                  <h2>Revenue sources</h2>
+                  <p>How the budget is funded</p>
+                </div>
+                <div class="chart-wrap">
+                  <canvas id="rev-chart" aria-label="Revenue pie chart"></canvas>
+                </div>
+              </article>
+            </section>
+          </section>
 
-      <section class="panel" id="budget-links-panel">
-        <div class="panel-head">
-          <h2>Budget ↔ news links</h2>
-          <p>Stories matched to budget categories with links to the source</p>
-        </div>
-        <p class="mobile-hint">On phones, each linked story shows as a card instead of a wide table.</p>
-        <div class="table-scroll">
-          <table class="links-table" id="budget-links-table">
-            <thead>
-              <tr>
-                <th scope="col">Budget category</th>
-                <th scope="col">Adopted amount</th>
-                <th scope="col">Story</th>
-                <th scope="col">Mentioned $</th>
-                <th scope="col">Source</th>
-                <th scope="col">Relevance</th>
-                <th scope="col">When</th>
-              </tr>
-            </thead>
-            <tbody id="budget-links-body">
-              <tr>
-                <td colspan="7" class="empty">Loading…</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+          <section class="tab-panel" role="tabpanel" id="tab-spending" aria-labelledby="tab-btn-spending" data-tab-panel="spending" hidden>
+            <section class="panel" id="destinations-panel">
+              <div class="panel-head">
+                <h2>Where the money goes</h2>
+                <p>Largest FY25–26 General Fund destinations (departments &amp; major lines)</p>
+              </div>
+              <div class="table-scroll destinations-desktop">
+                <table class="links-table compact-table" id="destinations-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Destination</th>
+                      <th scope="col">Adopted</th>
+                      <th scope="col">Share of GF</th>
+                      <th scope="col">YoY change</th>
+                    </tr>
+                  </thead>
+                  <tbody id="destinations-body">
+                    <tr>
+                      <td colspan="4" class="empty">Loading…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <ul class="destination-cards" id="destinations-mobile" aria-label="Spending destinations"></ul>
+            </section>
 
-      <section class="charts-grid bars-grid">
-        <article class="panel chart-panel wide">
-          <div class="panel-head">
-            <h2>Year-over-year change</h2>
-            <p>Adopted vs prior revised General Fund functions</p>
-          </div>
-          <div class="chart-wrap tall">
-            <canvas id="change-chart" aria-label="Budget change bar chart"></canvas>
-          </div>
-        </article>
-        <article class="panel chart-panel wide">
-          <div class="panel-head">
-            <h2>Historical General Fund budgets</h2>
-            <p>Adopted GF size, tax rate, and reserve draw by fiscal year</p>
-          </div>
-          <div class="chart-wrap tall">
-            <canvas id="history-chart" aria-label="Historical budget chart"></canvas>
-          </div>
-        </article>
-        <article class="panel chart-panel wide">
-          <div class="panel-head">
-            <h2>News attention vs budget share</h2>
-            <p>Story mentions aligned with expenditure categories</p>
-          </div>
-          <div class="chart-wrap tall">
-            <canvas id="topic-chart" aria-label="Topic mentions versus budget share"></canvas>
-          </div>
-        </article>
-      </section>
+            <section class="charts-grid bars-grid">
+              <article class="panel chart-panel wide">
+                <div class="panel-head">
+                  <h2>Year-over-year change</h2>
+                  <p>Adopted vs prior revised General Fund functions</p>
+                </div>
+                <div class="chart-wrap tall">
+                  <canvas id="change-chart" aria-label="Budget change bar chart"></canvas>
+                </div>
+              </article>
+            </section>
+          </section>
 
-      <section class="panel" id="resources-panel">
-        <div class="panel-head">
-          <h2>Track spending &amp; request records</h2>
-          <p>Official documents, interactive tools, and how to ask for more detail</p>
+          <section class="tab-panel" role="tabpanel" id="tab-trends" aria-labelledby="tab-btn-trends" data-tab-panel="trends" hidden>
+            <section class="charts-grid bars-grid">
+              <article class="panel chart-panel wide">
+                <div class="panel-head">
+                  <h2>Historical General Fund budgets</h2>
+                  <p>Adopted GF size, tax rate, and reserve draw by fiscal year</p>
+                </div>
+                <div class="chart-wrap tall">
+                  <canvas id="history-chart" aria-label="Historical budget chart"></canvas>
+                </div>
+              </article>
+              <article class="panel chart-panel wide">
+                <div class="panel-head">
+                  <h2>News attention vs budget share</h2>
+                  <p>Story mentions aligned with expenditure categories</p>
+                </div>
+                <div class="chart-wrap tall">
+                  <canvas id="topic-chart" aria-label="Topic mentions versus budget share"></canvas>
+                </div>
+              </article>
+            </section>
+          </section>
+
+          <section class="tab-panel" role="tabpanel" id="tab-news" aria-labelledby="tab-btn-news" data-tab-panel="news" hidden>
+            <section class="panel" id="budget-links-panel">
+              <div class="panel-head">
+                <h2>Budget ↔ news links</h2>
+                <p>Stories matched to budget categories with links to the source</p>
+              </div>
+              <p class="mobile-hint">On phones, each linked story shows as a card instead of a wide table.</p>
+              <div class="table-scroll">
+                <table class="links-table" id="budget-links-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Budget category</th>
+                      <th scope="col">Adopted amount</th>
+                      <th scope="col">Story</th>
+                      <th scope="col">Mentioned $</th>
+                      <th scope="col">Source</th>
+                      <th scope="col">Relevance</th>
+                      <th scope="col">When</th>
+                    </tr>
+                  </thead>
+                  <tbody id="budget-links-body">
+                    <tr>
+                      <td colspan="7" class="empty">Loading…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="stories-grid" id="stories-grid">
+              <article class="panel" id="official-stories-panel" hidden>
+                <div class="panel-head">
+                  <h2>Official county updates</h2>
+                  <p>From nhcgov.com and budget pages</p>
+                </div>
+                <ul class="story-list" id="official-stories"></ul>
+              </article>
+              <article class="panel" id="external-stories-panel">
+                <div class="panel-head">
+                  <h2>Local &amp; outside coverage</h2>
+                  <p>WHQR, Port City Daily, WECT, Google News, and more</p>
+                </div>
+                <ul class="story-list" id="external-stories"></ul>
+              </article>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <h2>Budget-related stories</h2>
+                <p>Items tagged against education, public safety, taxes, and other budget themes</p>
+              </div>
+              <ul class="story-list dense" id="budget-stories"></ul>
+            </section>
+          </section>
+
+          <section class="tab-panel" role="tabpanel" id="tab-sources" aria-labelledby="tab-btn-sources" data-tab-panel="sources" hidden>
+            <section class="panel" id="resources-panel">
+              <div class="panel-head">
+                <h2>Track spending &amp; request records</h2>
+                <p>Official documents, interactive tools, and how to ask for more detail</p>
+              </div>
+              <ul class="resource-list" id="resource-list"></ul>
+            </section>
+
+            <section class="panel sources-panel">
+              <div class="panel-head">
+                <h2>Configured sources</h2>
+                <p>Extensible per organization—add more counties later</p>
+              </div>
+              <ul class="source-list" id="source-list"></ul>
+            </section>
+          </section>
         </div>
-        <ul class="resource-list" id="resource-list"></ul>
-      </section>
-
-      <section class="stories-grid" id="stories-grid">
-        <article class="panel" id="official-stories-panel" hidden>
-          <div class="panel-head">
-            <h2>Official county updates</h2>
-            <p>From nhcgov.com and budget pages</p>
-          </div>
-          <ul class="story-list" id="official-stories"></ul>
-        </article>
-        <article class="panel" id="external-stories-panel">
-          <div class="panel-head">
-            <h2>Local &amp; outside coverage</h2>
-            <p>WHQR, Port City Daily, WECT, Google News, and more</p>
-          </div>
-          <ul class="story-list" id="external-stories"></ul>
-        </article>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <h2>Budget-related stories</h2>
-          <p>Items tagged against education, public safety, taxes, and other budget themes</p>
-        </div>
-        <ul class="story-list dense" id="budget-stories"></ul>
-      </section>
-
-      <section class="panel sources-panel">
-        <div class="panel-head">
-          <h2>Configured sources</h2>
-          <p>Extensible per organization—add more counties later</p>
-        </div>
-        <ul class="source-list" id="source-list"></ul>
-      </section>
+      </div>
     </main>
 
     <footer class="site-footer">
