@@ -7,6 +7,7 @@ In-Brief (https://www.nhcgov.com / DocumentCenter).
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.fiscal_seed import ensure_nhc_fiscal_data
 from app.models import BudgetLineItem, BudgetYear, NewsSource, Organization, Story
 
 
@@ -161,6 +162,20 @@ def seed_database(db: Session) -> None:
     existing = db.scalar(select(Organization).where(Organization.slug == "new-hanover-county"))
     if existing:
         ensure_nhc_sources(db, existing)
+        ensure_nhc_fiscal_data(db, existing)
+        # Keep current FY notes/balance fields fresh on existing installs
+        current = db.scalar(
+            select(BudgetYear).where(
+                BudgetYear.organization_id == existing.id,
+                BudgetYear.fiscal_year == "FY2025-26",
+            )
+        )
+        if current and not current.balance_summary:
+            current.balance_summary = (
+                "Still a balanced ordinance (appropriations = estimated revenues), but about "
+                "$19.7M comes from fund-balance appropriations—so the plan draws on reserves "
+                "rather than recurring revenues alone. Revaluation year; rate reset to 30.6¢."
+            )
         db.commit()
         return
 
@@ -180,25 +195,14 @@ def seed_database(db: Session) -> None:
     db.add(org)
     db.flush()
 
-    budget = BudgetYear(
-        organization_id=org.id,
-        fiscal_year="FY2025-26",
-        label="Fiscal Year 2025–2026 Adopted Budget",
-        status="adopted",
-        tax_rate_cents=30.6,
-        total_expenditures=468_912_088,
-        total_revenues=468_912_088,
-        adopted_on="2025-06-12",
-        source_url="https://www.nhcgov.com/2784/Fiscal-Year-2025-2026",
-        notes=(
-            "Adopted 3–2 by the Board of Commissioners on June 12, 2025. "
-            "Property tax rate held at 30.6¢ per $100 assessed value "
-            "(29.5¢ General Fund + 1.1¢ Debt Service). "
-            "Figures from the FY25-26 Adopted Budget In-Brief."
-        ),
+    ensure_nhc_fiscal_data(db, org)
+    budget = db.scalar(
+        select(BudgetYear).where(
+            BudgetYear.organization_id == org.id,
+            BudgetYear.fiscal_year == "FY2025-26",
+        )
     )
-    db.add(budget)
-    db.flush()
+    assert budget is not None
 
     expenditures = [
         ("Education", 122_480_584, 132_939_870, -7.9, 1),

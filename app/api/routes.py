@@ -6,16 +6,19 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.collectors.runner import run_collection
 from app.database import get_db
-from app.models import BudgetYear, CollectionRun, NewsSource, Organization, Story
+from app.models import BudgetYear, CollectionRun, NewsSource, Organization, Story, TransparencyResource
 from app.money import extract_mentioned_money
 from app.schemas import (
     BudgetStoryLinkOut,
     BudgetYearOut,
+    BudgetYearSummaryOut,
     CollectionStatusOut,
     DashboardOut,
+    FiscalBalanceOut,
     OrganizationOut,
     StoryOut,
     TopicMentionOut,
+    TransparencyResourceOut,
 )
 
 router = APIRouter(prefix="/api")
@@ -80,12 +83,19 @@ def list_stories(
 @router.get("/organizations/{slug}/dashboard", response_model=DashboardOut)
 def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
     org = _get_org(db, slug)
-    budget = db.scalar(
-        select(BudgetYear)
-        .where(BudgetYear.organization_id == org.id)
-        .options(selectinload(BudgetYear.line_items))
-        .order_by(desc(BudgetYear.fiscal_year))
+    budgets = list(
+        db.scalars(
+            select(BudgetYear)
+            .where(BudgetYear.organization_id == org.id)
+            .options(selectinload(BudgetYear.line_items))
+            .order_by(BudgetYear.fiscal_year)
+        ).all()
     )
+    budget = None
+    if budgets:
+        # Prefer the latest fiscal year label lexicographically (FY2025-26 > FY2024-25)
+        budget = sorted(budgets, key=lambda b: b.fiscal_year)[-1]
+
     stories = list(
         db.scalars(
             select(Story)
@@ -102,6 +112,13 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
             .order_by(NewsSource.name)
         ).all()
     )
+    resources = list(
+        db.scalars(
+            select(TransparencyResource)
+            .where(TransparencyResource.organization_id == org.id)
+            .order_by(TransparencyResource.sort_order, TransparencyResource.name)
+        ).all()
+    )
 
     topic_counts: dict[str, int] = {}
     for story in stories:
@@ -110,8 +127,12 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
 
     budget_by_topic: dict[str, float] = {}
     total_exp = budget.total_expenditures if budget else 0
+    top_destinations = []
     if budget:
         for item in budget.line_items:
+            if item.category == "department":
+                top_destinations.append(item)
+                continue
             if item.category != "expenditure":
                 continue
             key = item.function_name.lower()
@@ -131,6 +152,7 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
                 budget_by_topic["economic development"] = item.amount
             elif "debt" in key:
                 budget_by_topic["debt service"] = budget_by_topic.get("debt service", 0) + item.amount
+        top_destinations.sort(key=lambda i: i.sort_order)
 
     topic_mentions = []
     for topic, count in sorted(topic_counts.items(), key=lambda x: (-x[1], x[0])):
@@ -151,7 +173,6 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
         topics = [t.strip() for t in (story.topics or "").split(",") if t.strip()]
         if not topics and story.budget_relevance <= 0:
             continue
-        # Prefer topics that map to a budget amount; otherwise keep tagged topics
         ranked_topics = sorted(
             topics,
             key=lambda t: (
@@ -186,7 +207,6 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
                     mentioned_money_value=mentioned_value,
                 )
             )
-            # One primary budget link per story keeps the table readable
             break
     budget_story_links.sort(
         key=lambda row: (
@@ -196,6 +216,76 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
             row.story_title.lower(),
         )
     )
+
+    history: list[BudgetYearSummaryOut] = []
+    for row in sorted(budgets, key=lambda b: b.fiscal_year):
+        gap = round((row.total_expenditures or 0) - (row.total_revenues or 0), 2)
+        reserve = float(row.fund_balance_appropriated or 0)
+        history.append(
+            BudgetYearSummaryOut(
+                fiscal_year=row.fiscal_year,
+                label=row.label,
+                tax_rate_cents=row.tax_rate_cents,
+                total_expenditures=row.total_expenditures,
+                total_revenues=row.total_revenues,
+                all_funds_total=row.all_funds_total,
+                fund_balance_appropriated=row.fund_balance_appropriated,
+                is_balanced=bool(row.is_balanced if row.is_balanced is not None else True),
+                balance_summary=row.balance_summary,
+                adopted_on=row.adopted_on,
+                source_url=row.source_url,
+                operating_gap=gap,
+                reserve_draw=reserve,
+            )
+        )
+
+    fiscal_balance = None
+    if budget:
+        adopted_gap = round((budget.total_expenditures or 0) - (budget.total_revenues or 0), 2)
+        reserve_draw = float(budget.fund_balance_appropriated or 0)
+        recurring = (budget.total_revenues or 0) - reserve_draw
+        coverage = None
+        if recurring > 0 and budget.total_expenditures:
+            coverage = round(recurring / budget.total_expenditures * 100, 1)
+        if adopted_gap == 0 and reserve_draw > 0:
+            status = "balanced_with_reserves"
+            headline = "Balanced on paper, drawing reserves"
+            detail = (
+                budget.balance_summary
+                or (
+                    "North Carolina counties must adopt a balanced budget ordinance "
+                    "(appropriations = estimated revenues). This plan is balanced, but "
+                    f"{reserve_draw:,.0f} of revenue is appropriated fund balance—so "
+                    "spending exceeds recurring revenues alone."
+                )
+            )
+        elif adopted_gap == 0:
+            status = "balanced"
+            headline = "Balanced adopted budget"
+            detail = (
+                budget.balance_summary
+                or (
+                    "The adopted ordinance balances estimated revenues with appropriations. "
+                    "Check the Annual Comprehensive Financial Report (ACFR) after year-end "
+                    "for actual surplus or deficit results."
+                )
+            )
+        elif adopted_gap > 0:
+            status = "deficit"
+            headline = "Adopted plan spends more than estimated revenues"
+            detail = budget.balance_summary or f"Adopted gap of ${adopted_gap:,.0f}."
+        else:
+            status = "surplus"
+            headline = "Adopted plan estimates more revenue than appropriations"
+            detail = budget.balance_summary or f"Adopted surplus of ${abs(adopted_gap):,.0f}."
+        fiscal_balance = FiscalBalanceOut(
+            status=status,
+            headline=headline,
+            detail=detail,
+            adopted_gap=adopted_gap,
+            reserve_draw=reserve_draw,
+            recurring_revenue_coverage=coverage,
+        )
 
     last_run = db.scalar(select(CollectionRun).order_by(desc(CollectionRun.started_at)))
     last_collection: datetime | None = None
@@ -211,6 +301,10 @@ def dashboard(slug: str, db: Session = Depends(get_db)) -> DashboardOut:
     return DashboardOut(
         organization=OrganizationOut.model_validate(org),
         current_budget=BudgetYearOut.model_validate(budget) if budget else None,
+        budget_history=history,
+        fiscal_balance=fiscal_balance,
+        top_destinations=top_destinations,
+        transparency_resources=[TransparencyResourceOut.model_validate(r) for r in resources],
         recent_stories=[StoryOut.model_validate(s) for s in stories[:25]],
         official_stories=[StoryOut.model_validate(s) for s in official],
         external_stories=[StoryOut.model_validate(s) for s in external],

@@ -38,10 +38,52 @@ class BudgetYearOut(BaseModel):
     tax_rate_cents: float | None = None
     total_expenditures: float
     total_revenues: float
+    all_funds_total: float | None = None
+    fund_balance_appropriated: float | None = None
+    is_balanced: bool = True
+    balance_summary: str | None = None
     adopted_on: str | None = None
     source_url: str | None = None
     notes: str | None = None
     line_items: list[BudgetLineItemOut] = Field(default_factory=list)
+
+
+class BudgetYearSummaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    fiscal_year: str
+    label: str
+    tax_rate_cents: float | None = None
+    total_expenditures: float
+    total_revenues: float
+    all_funds_total: float | None = None
+    fund_balance_appropriated: float | None = None
+    is_balanced: bool = True
+    balance_summary: str | None = None
+    adopted_on: str | None = None
+    source_url: str | None = None
+    operating_gap: float = 0
+    reserve_draw: float = 0
+
+
+class FiscalBalanceOut(BaseModel):
+    status: str
+    headline: str
+    detail: str
+    adopted_gap: float
+    reserve_draw: float
+    recurring_revenue_coverage: float | None = None
+
+
+class TransparencyResourceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    category: str
+    url: str
+    description: str | None = None
+    sort_order: int = 0
 
 
 class NewsSourceOut(BaseModel):
@@ -95,6 +137,10 @@ class BudgetStoryLinkOut(BaseModel):
 class DashboardOut(BaseModel):
     organization: OrganizationOut
     current_budget: BudgetYearOut | None
+    budget_history: list[BudgetYearSummaryOut] = Field(default_factory=list)
+    fiscal_balance: FiscalBalanceOut | None = None
+    top_destinations: list[BudgetLineItemOut] = Field(default_factory=list)
+    transparency_resources: list[TransparencyResourceOut] = Field(default_factory=list)
     recent_stories: list[StoryOut]
     official_stories: list[StoryOut]
     external_stories: list[StoryOut]
