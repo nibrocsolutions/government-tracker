@@ -98,9 +98,8 @@
           <h2>Where the money goes</h2>
           <p>Largest FY25–26 General Fund destinations (departments &amp; major lines)</p>
         </div>
-        <p class="mobile-hint">On phones, each destination shows as a card instead of a wide table.</p>
-        <div class="table-scroll">
-          <table class="links-table" id="destinations-table">
+        <div class="table-scroll destinations-desktop">
+          <table class="links-table compact-table" id="destinations-table">
             <thead>
               <tr>
                 <th scope="col">Destination</th>
@@ -116,6 +115,7 @@
             </tbody>
           </table>
         </div>
+        <ul class="destination-cards" id="destinations-mobile" aria-label="Spending destinations"></ul>
       </section>
 
       <section class="panel" id="budget-links-panel">

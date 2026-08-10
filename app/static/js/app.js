@@ -448,24 +448,87 @@ function renderFiscalBalance(balance) {
     </div>`;
 }
 
+function yoyClass(pctChange) {
+  if (pctChange == null || Number.isNaN(pctChange)) return "";
+  if (pctChange > 0) return "is-up";
+  if (pctChange < 0) return "is-down";
+  return "";
+}
+
+function formatYoy(pctChange) {
+  if (pctChange == null || Number.isNaN(pctChange)) return "—";
+  return `${pctChange > 0 ? "+" : ""}${Number(pctChange).toFixed(1)}%`;
+}
+
+function renderDestinationCards(items, total, listedTotal, listedShare, listedYoy, listedYoyPct) {
+  const mobile = $("destinations-mobile");
+  if (!mobile) return;
+  if (!items.length) {
+    mobile.innerHTML = `<li class="empty">Department destinations not loaded yet.</li>`;
+    return;
+  }
+
+  const maxShare = Math.max(
+    ...items.map((item) => (total ? (item.amount / total) * 100 : 0)),
+    total ? (listedTotal / total) * 100 : 0,
+    1
+  );
+
+  const cards = items.map((item, index) => {
+    const sharePct = total ? (item.amount / total) * 100 : 0;
+    const barWidth = Math.max(4, (sharePct / maxShare) * 100);
+    const yoy = formatYoy(item.pct_change);
+    return `
+      <li class="destination-card">
+        <div class="destination-card-top">
+          <span class="destination-rank">${index + 1}</span>
+          <h3 class="destination-name">${escapeHtml(item.function_name)}</h3>
+          <span class="destination-yoy ${yoyClass(item.pct_change)}">${escapeHtml(yoy)}</span>
+        </div>
+        <p class="destination-amount">${escapeHtml(money.format(item.amount))}</p>
+        <div class="destination-share-row">
+          <span>Share of General Fund</span>
+          <span>${escapeHtml(sharePct.toFixed(1))}%</span>
+        </div>
+        <div class="destination-bar" aria-hidden="true"><span style="width:${barWidth.toFixed(1)}%"></span></div>
+      </li>`;
+  });
+
+  const totalBar = total ? Math.max(4, ((listedTotal / total) * 100 / maxShare) * 100) : 4;
+  cards.push(`
+    <li class="destination-card is-total">
+      <div class="destination-card-top">
+        <span class="destination-rank">Total</span>
+        <h3 class="destination-name">Listed destinations</h3>
+        <span class="destination-yoy ${yoyClass(listedYoyPct)}">${escapeHtml(listedYoy)}</span>
+      </div>
+      <p class="destination-amount">${escapeHtml(money.format(listedTotal))}</p>
+      <div class="destination-share-row">
+        <span>Share of General Fund</span>
+        <span>${escapeHtml(listedShare)}</span>
+      </div>
+      <div class="destination-bar" aria-hidden="true"><span style="width:${totalBar.toFixed(1)}%"></span></div>
+    </li>`);
+
+  mobile.innerHTML = cards.join("");
+}
+
 function renderDestinations(items, total) {
   const body = $("destinations-body");
   if (!items.length) {
     body.innerHTML = `<tr><td colspan="4" class="empty">Department destinations not loaded yet.</td></tr>`;
+    renderDestinationCards([], total, 0, "—", "—", null);
     return;
   }
   const rows = items.map((item) => {
     const share = total ? ((item.amount / total) * 100).toFixed(1) + "%" : "—";
-    const yoy =
-      item.pct_change != null
-        ? `${item.pct_change > 0 ? "+" : ""}${item.pct_change}%`
-        : "—";
+    const yoy = formatYoy(item.pct_change);
     return `
       <tr>
-        <td data-label="Destination" class="category">${escapeHtml(item.function_name)}</td>
-        <td data-label="Adopted" class="amount">${escapeHtml(money.format(item.amount))}</td>
-        <td data-label="Share of GF" class="amount">${escapeHtml(share)}</td>
-        <td data-label="YoY change">${escapeHtml(yoy)}</td>
+        <td class="category">${escapeHtml(item.function_name)}</td>
+        <td class="amount">${escapeHtml(money.format(item.amount))}</td>
+        <td class="amount">${escapeHtml(share)}</td>
+        <td>${escapeHtml(yoy)}</td>
       </tr>`;
   });
 
@@ -476,21 +539,23 @@ function renderDestinations(items, total) {
   );
   const hasPriors = items.some((item) => item.prior_amount != null);
   const listedShare = total ? ((listedTotal / total) * 100).toFixed(1) + "%" : "—";
+  let listedYoyPct = null;
   let listedYoy = "—";
   if (hasPriors && listedPrior > 0) {
-    const pct = ((listedTotal - listedPrior) / listedPrior) * 100;
-    listedYoy = `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`;
+    listedYoyPct = ((listedTotal - listedPrior) / listedPrior) * 100;
+    listedYoy = formatYoy(listedYoyPct);
   }
 
   rows.push(`
     <tr class="totals-row">
-      <td data-label="Destination" class="category">Total (listed destinations)</td>
-      <td data-label="Adopted" class="amount">${escapeHtml(money.format(listedTotal))}</td>
-      <td data-label="Share of GF" class="amount">${escapeHtml(listedShare)}</td>
-      <td data-label="YoY change">${escapeHtml(listedYoy)}</td>
+      <td class="category">Total (listed destinations)</td>
+      <td class="amount">${escapeHtml(money.format(listedTotal))}</td>
+      <td class="amount">${escapeHtml(listedShare)}</td>
+      <td>${escapeHtml(listedYoy)}</td>
     </tr>`);
 
   body.innerHTML = rows.join("");
+  renderDestinationCards(items, total, listedTotal, listedShare, listedYoy, listedYoyPct);
 }
 
 function renderResources(resources) {
