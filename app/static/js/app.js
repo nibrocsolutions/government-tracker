@@ -7,6 +7,7 @@ let charts = {
   rev: null,
   change: null,
   topic: null,
+  history: null,
 };
 
 let chartRenderToken = 0;
@@ -316,7 +317,7 @@ function renderTopicChart(mentions) {
   });
 }
 
-function scheduleChartRender(budget, mentions) {
+function scheduleChartRender(budget, mentions, history) {
   const token = ++chartRenderToken;
   // Wait for layout to settle so Chart.js measures stable container sizes.
   requestAnimationFrame(() => {
@@ -324,6 +325,7 @@ function scheduleChartRender(budget, mentions) {
       if (token !== chartRenderToken) return;
       renderBudgetCharts(budget);
       renderTopicChart(mentions || []);
+      renderHistoryChart(history || []);
       chartsReady = true;
       // Force one stable resize after fonts/layout settle.
       requestAnimationFrame(() => {
@@ -334,6 +336,154 @@ function scheduleChartRender(budget, mentions) {
       });
     });
   });
+}
+
+function renderHistoryChart(history) {
+  const canvas = resetCanvas("history-chart", "history");
+  if (!canvas || !history.length) return;
+  const defaults = chartDefaults();
+  charts.history = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: history.map((h) => h.fiscal_year),
+      datasets: [
+        {
+          type: "bar",
+          label: "General Fund adopted ($)",
+          data: history.map((h) => h.total_expenditures),
+          backgroundColor: "rgba(10, 69, 72, 0.75)",
+          borderRadius: 8,
+          yAxisID: "y",
+        },
+        {
+          type: "bar",
+          label: "Fund balance used ($)",
+          data: history.map((h) => h.reserve_draw || 0),
+          backgroundColor: "rgba(196, 165, 116, 0.85)",
+          borderRadius: 8,
+          yAxisID: "y",
+        },
+        {
+          type: "line",
+          label: "Tax rate (¢)",
+          data: history.map((h) => h.tax_rate_cents ?? null),
+          borderColor: "#c45c3e",
+          backgroundColor: "#c45c3e",
+          yAxisID: "y1",
+          tension: 0.25,
+        },
+      ],
+    },
+    options: {
+      ...defaults,
+      scales: {
+        y: {
+          position: "left",
+          title: { display: true, text: "Dollars", color: "#3a5260" },
+          ticks: {
+            callback: (v) => moneyCompact.format(v),
+            color: "#3a5260",
+          },
+          grid: { color: "rgba(19,37,47,0.08)" },
+        },
+        y1: {
+          position: "right",
+          title: { display: true, text: "Tax rate ¢", color: "#3a5260" },
+          grid: { drawOnChartArea: false },
+          ticks: { color: "#3a5260" },
+        },
+        x: {
+          ticks: { color: "#3a5260" },
+          grid: { display: false },
+        },
+      },
+    },
+  });
+}
+
+function renderFiscalBalance(balance) {
+  const panel = $("fiscal-balance-panel");
+  if (!balance) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  const pill = $("balance-status-pill");
+  pill.textContent = balance.headline;
+  pill.className = "status-pill";
+  if (balance.status === "balanced_with_reserves") pill.classList.add("is-reserves");
+  if (balance.status === "deficit") pill.classList.add("is-deficit");
+  $("balance-headline").textContent = balance.headline;
+  $("balance-detail").textContent = balance.detail;
+  const coverage =
+    balance.recurring_revenue_coverage != null
+      ? `${balance.recurring_revenue_coverage}%`
+      : "—";
+  $("balance-metrics").innerHTML = `
+    <div class="balance-metric">
+      <span>Adopted gap</span>
+      <strong>${escapeHtml(money.format(balance.adopted_gap || 0))}</strong>
+    </div>
+    <div class="balance-metric">
+      <span>Reserve draw</span>
+      <strong>${escapeHtml(money.format(balance.reserve_draw || 0))}</strong>
+    </div>
+    <div class="balance-metric">
+      <span>Recurring revenue coverage</span>
+      <strong>${escapeHtml(coverage)}</strong>
+    </div>`;
+}
+
+function renderDestinations(items, total) {
+  const body = $("destinations-body");
+  if (!items.length) {
+    body.innerHTML = `<tr><td colspan="4" class="empty">Department destinations not loaded yet.</td></tr>`;
+    return;
+  }
+  body.innerHTML = items
+    .map((item) => {
+      const share = total ? ((item.amount / total) * 100).toFixed(1) + "%" : "—";
+      const yoy =
+        item.pct_change != null
+          ? `${item.pct_change > 0 ? "+" : ""}${item.pct_change}%`
+          : "—";
+      return `
+        <tr>
+          <td class="category">${escapeHtml(item.function_name)}</td>
+          <td class="amount">${escapeHtml(money.format(item.amount))}</td>
+          <td class="amount">${escapeHtml(share)}</td>
+          <td>${escapeHtml(yoy)}</td>
+        </tr>`;
+    })
+    .join("");
+}
+
+function renderResources(resources) {
+  const el = $("resource-list");
+  if (!resources.length) {
+    el.innerHTML = `<li class="empty">No transparency resources configured.</li>`;
+    return;
+  }
+  const categoryLabel = {
+    public_records: "Public records",
+    budget_documents: "Budget documents",
+    spending_tools: "Spending tools",
+    contacts: "Contacts",
+    oversight: "Oversight",
+    audited_results: "Audited results",
+  };
+  el.innerHTML = resources
+    .map(
+      (r) => `
+      <li class="resource-item">
+        <a href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.name)}</a>
+        <div class="story-meta"><span class="topic-chip">${escapeHtml(
+          categoryLabel[r.category] || r.category
+        )}</span></div>
+        ${r.description ? `<p>${escapeHtml(r.description)}</p>` : ""}
+      </li>`
+    )
+    .join("");
 }
 
 function renderBudgetLinks(links) {
@@ -457,8 +607,11 @@ async function loadDashboard(slug) {
     .sort((a, b) => b.budget_relevance - a.budget_relevance);
   renderStories("budget-stories", budgetStories, "No budget-tagged stories yet.");
   renderBudgetLinks(data.budget_story_links || []);
+  renderFiscalBalance(data.fiscal_balance);
+  renderDestinations(data.top_destinations || [], budget?.total_expenditures || 0);
+  renderResources(data.transparency_resources || []);
   renderSources(data.sources || []);
-  scheduleChartRender(budget, data.topic_mentions || []);
+  scheduleChartRender(budget, data.topic_mentions || [], data.budget_history || []);
 
   document.body.classList.add("is-ready");
   $("status-line").textContent = `Showing ${org.short_name}`;

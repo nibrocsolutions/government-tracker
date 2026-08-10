@@ -32,6 +32,7 @@ class Organization(Base):
     budgets: Mapped[list["BudgetYear"]] = relationship(back_populates="organization")
     sources: Mapped[list["NewsSource"]] = relationship(back_populates="organization")
     stories: Mapped[list["Story"]] = relationship(back_populates="organization")
+    resources: Mapped[list["TransparencyResource"]] = relationship(back_populates="organization")
 
 
 class BudgetYear(Base):
@@ -46,6 +47,10 @@ class BudgetYear(Base):
     tax_rate_cents: Mapped[float | None] = mapped_column(Float, nullable=True)
     total_expenditures: Mapped[float] = mapped_column(Float, default=0)
     total_revenues: Mapped[float] = mapped_column(Float, default=0)
+    all_funds_total: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fund_balance_appropriated: Mapped[float | None] = mapped_column(Float, nullable=True)
+    is_balanced: Mapped[bool] = mapped_column(Boolean, default=True)
+    balance_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     adopted_on: Mapped[str | None] = mapped_column(String(40), nullable=True)
     source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -61,7 +66,7 @@ class BudgetLineItem(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     budget_year_id: Mapped[int] = mapped_column(ForeignKey("budget_years.id"))
-    category: Mapped[str] = mapped_column(String(40))  # expenditure | revenue
+    category: Mapped[str] = mapped_column(String(40))  # expenditure | revenue | department
     function_name: Mapped[str] = mapped_column(String(120))
     amount: Mapped[float] = mapped_column(Float)
     prior_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -69,6 +74,20 @@ class BudgetLineItem(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     budget_year: Mapped[BudgetYear] = relationship(back_populates="line_items")
+
+
+class TransparencyResource(Base):
+    __tablename__ = "transparency_resources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"))
+    name: Mapped[str] = mapped_column(String(200))
+    category: Mapped[str] = mapped_column(String(80))
+    url: Mapped[str] = mapped_column(String(700))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    organization: Mapped[Organization] = relationship(back_populates="resources")
 
 
 class NewsSource(Base):

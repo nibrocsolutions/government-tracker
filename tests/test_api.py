@@ -32,6 +32,19 @@ def test_organizations_and_dashboard():
             assert "story_url" in link
             assert "story_title" in link
             assert "mentioned_money" in link
+        assert data["fiscal_balance"] is not None
+        assert data["fiscal_balance"]["status"] in {
+            "balanced",
+            "balanced_with_reserves",
+            "deficit",
+            "surplus",
+        }
+        assert data["fiscal_balance"]["reserve_draw"] >= 0
+        assert len(data["budget_history"]) >= 3
+        assert len(data["top_destinations"]) >= 5
+        assert any("Sheriff" in d["function_name"] for d in data["top_destinations"])
+        assert len(data["transparency_resources"]) >= 4
+        assert any(r["category"] == "public_records" for r in data["transparency_resources"])
 
 
 def test_homepage():
@@ -43,7 +56,12 @@ def test_homepage():
         assert b"Budget" in response.content and b"news links" in response.content
         assert b"Mentioned $" in response.content
         assert b"official-stories-panel" in response.content
+        assert b"Where the money goes" in response.content
+        assert b"Deficit or surplus" in response.content
+        assert b"request records" in response.content
         # Table should appear before the YoY bar chart section
         html = response.text
         assert html.index("budget-links-panel") < html.index("change-chart")
         assert html.index("exp-chart") < html.index("budget-links-panel")
+        assert html.index("fiscal-balance-panel") < html.index("destinations-panel")
+        assert html.index("destinations-panel") < html.index("budget-links-panel")

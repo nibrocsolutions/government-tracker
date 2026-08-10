@@ -10,6 +10,7 @@ from app.api.routes import router
 from app.collectors.runner import run_collection
 from app.config import settings
 from app.database import Base, SessionLocal, engine
+from app.schema_migrate import ensure_schema
 from app.seed import seed_database
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -28,6 +29,7 @@ def _scheduled_collect() -> None:
 async def lifespan(_: FastAPI):
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    ensure_schema(engine)
     db = SessionLocal()
     try:
         seed_database(db)
