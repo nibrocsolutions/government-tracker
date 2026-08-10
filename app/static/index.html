@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Government Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/app.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+    <script src="/static/js/app.js" defer></script>
+  </head>
+  <body>
+    <div class="page-wash" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <div class="brand-block">
+        <p class="eyebrow">Public finance &amp; local news</p>
+        <h1 class="brand">Government Tracker</h1>
+        <p class="tagline" id="org-tagline">
+          Following budgets and coverage for local governments—starting with New Hanover County, NC.
+        </p>
+      </div>
+      <div class="header-actions">
+        <label class="org-picker">
+          <span>Organization</span>
+          <select id="org-select" aria-label="Select organization"></select>
+        </label>
+        <button type="button" id="refresh-btn" class="btn-primary">Refresh sources</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero-stats" id="hero-stats" aria-live="polite">
+        <div class="stat">
+          <span class="stat-label">Adopted budget</span>
+          <strong class="stat-value" id="stat-budget">—</strong>
+          <span class="stat-meta" id="stat-fy">Fiscal year</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Tax rate</span>
+          <strong class="stat-value" id="stat-tax">—</strong>
+          <span class="stat-meta">per $100 assessed</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Tracked stories</span>
+          <strong class="stat-value" id="stat-stories">—</strong>
+          <span class="stat-meta" id="stat-collected">Awaiting collection</span>
+        </div>
+      </section>
+
+      <section class="panel" id="budget-notes-panel">
+        <div class="panel-head">
+          <h2>Budget snapshot</h2>
+          <a id="budget-source-link" href="#" target="_blank" rel="noopener">Official source</a>
+        </div>
+        <p class="lede" id="budget-notes"></p>
+      </section>
+
+      <section class="charts-grid">
+        <article class="panel chart-panel">
+          <div class="panel-head">
+            <h2>Expenditures by function</h2>
+            <p>Where General Fund dollars go</p>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="exp-chart" aria-label="Expenditures pie chart"></canvas>
+          </div>
+        </article>
+        <article class="panel chart-panel">
+          <div class="panel-head">
+            <h2>Revenue sources</h2>
+            <p>How the budget is funded</p>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="rev-chart" aria-label="Revenue pie chart"></canvas>
+          </div>
+        </article>
+        <article class="panel chart-panel wide">
+          <div class="panel-head">
+            <h2>Year-over-year change</h2>
+            <p>Adopted vs prior revised General Fund functions</p>
+          </div>
+          <div class="chart-wrap tall">
+            <canvas id="change-chart" aria-label="Budget change bar chart"></canvas>
+          </div>
+        </article>
+        <article class="panel chart-panel wide">
+          <div class="panel-head">
+            <h2>News attention vs budget share</h2>
+            <p>Story mentions aligned with expenditure categories</p>
+          </div>
+          <div class="chart-wrap tall">
+            <canvas id="topic-chart" aria-label="Topic mentions versus budget share"></canvas>
+          </div>
+        </article>
+      </section>
+
+      <section class="stories-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Official county updates</h2>
+            <p>From nhcgov.com and budget pages</p>
+          </div>
+          <ul class="story-list" id="official-stories"></ul>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Local &amp; outside coverage</h2>
+            <p>WHQR, Port City Daily, WECT, Google News, and more</p>
+          </div>
+          <ul class="story-list" id="external-stories"></ul>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Budget-related stories</h2>
+          <p>Items tagged against education, public safety, taxes, and other budget themes</p>
+        </div>
+        <ul class="story-list dense" id="budget-stories"></ul>
+      </section>
+
+      <section class="panel sources-panel">
+        <div class="panel-head">
+          <h2>Configured sources</h2>
+          <p>Extensible per organization—add more counties later</p>
+        </div>
+        <ul class="source-list" id="source-list"></ul>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Government Tracker · Docker-ready for Raspberry Pi and beyond ·
+        <a href="https://github.com/nibrocsolutions/government-tracker" target="_blank" rel="noopener"
+          >nibrocsolutions/government-tracker</a
+        >
+      </p>
+      <p id="status-line" class="status-line"></p>
+    </footer>
+  </body>
+</html>
