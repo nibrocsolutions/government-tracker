@@ -1,0 +1,17 @@
+services:
+  government-tracker:
+    build: .
+    image: government-tracker:latest
+    container_name: government-tracker
+    ports:
+      - "8000:8000"
+    volumes:
+      - gt-data:/data
+    environment:
+      DATA_DIR: /data
+      COLLECT_INTERVAL_MINUTES: "60"
+      PORT: "8000"
+    restart: unless-stopped
+
+volumes:
+  gt-data:
