@@ -241,10 +241,82 @@ main,
 .chart-wrap {
   position: relative;
   height: 280px;
+  width: 100%;
+  overflow: hidden;
 }
 
 .chart-wrap.tall {
-  height: 320px;
+  height: 340px;
+}
+
+.chart-wrap canvas {
+  display: block;
+  max-width: 100%;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+
+.links-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.links-table th,
+.links-table td {
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.links-table th {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: rgba(243, 240, 232, 0.85);
+  position: sticky;
+  top: 0;
+}
+
+.links-table tbody tr:hover {
+  background: rgba(15, 106, 106, 0.05);
+}
+
+.links-table a {
+  color: var(--sea-deep);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.links-table a:hover {
+  color: var(--sea);
+  text-decoration: underline;
+}
+
+.links-table .amount {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.links-table .category {
+  text-transform: capitalize;
+  font-weight: 600;
+  color: var(--sea-deep);
+}
+
+body.is-ready .site-header,
+body.is-ready .hero-stats,
+body.is-ready .panel {
+  animation: none;
 }
 
 .stories-grid {

@@ -24,6 +24,13 @@ def test_organizations_and_dashboard():
         assert data["current_budget"]["total_expenditures"] == 468_912_088
         assert len(data["current_budget"]["line_items"]) >= 8
         assert len(data["sources"]) >= 4
+        assert "budget_story_links" in data
+        assert isinstance(data["budget_story_links"], list)
+        if data["budget_story_links"]:
+            link = data["budget_story_links"][0]
+            assert "budget_category" in link
+            assert "story_url" in link
+            assert "story_title" in link
 
 
 def test_homepage():
@@ -31,3 +38,5 @@ def test_homepage():
         response = client.get("/")
         assert response.status_code == 200
         assert b"Government Tracker" in response.content
+        assert b"budget-links-table" in response.content
+        assert b"Budget" in response.content and b"news links" in response.content

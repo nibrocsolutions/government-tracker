@@ -77,6 +77,19 @@ class TopicMentionOut(BaseModel):
     budget_share: float | None = None
 
 
+class BudgetStoryLinkOut(BaseModel):
+    budget_category: str
+    budget_amount: float | None = None
+    budget_share: float | None = None
+    story_id: int
+    story_title: str
+    story_url: str
+    source_name: str | None = None
+    budget_relevance: float
+    is_official: bool
+    published_at: datetime | None = None
+
+
 class DashboardOut(BaseModel):
     organization: OrganizationOut
     current_budget: BudgetYearOut | None
@@ -84,6 +97,7 @@ class DashboardOut(BaseModel):
     official_stories: list[StoryOut]
     external_stories: list[StoryOut]
     topic_mentions: list[TopicMentionOut]
+    budget_story_links: list[BudgetStoryLinkOut] = Field(default_factory=list)
     sources: list[NewsSourceOut]
     last_collection: datetime | None = None
 
