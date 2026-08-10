@@ -291,6 +291,16 @@ main,
   background: rgba(15, 106, 106, 0.05);
 }
 
+.links-table .totals-row {
+  background: rgba(10, 69, 72, 0.08);
+  border-top: 2px solid rgba(10, 69, 72, 0.2);
+  font-weight: 700;
+}
+
+.links-table .totals-row:hover {
+  background: rgba(10, 69, 72, 0.1);
+}
+
 .links-table a {
   color: var(--sea-deep);
   font-weight: 600;
