@@ -64,6 +64,10 @@ def test_homepage():
         assert b"destinations-mobile" in response.content
         assert b"destination-cards" in response.content
         assert b"destinations-desktop" in response.content
+        assert b"budget-links-mobile" in response.content
+        assert b"news-link-cards" in response.content
+        assert b"Open story" in response.content
+        assert b"section-tabs" not in response.content
         # Table should appear before the YoY bar chart section
         html = response.text
         assert html.index("budget-links-panel") < html.index("change-chart")

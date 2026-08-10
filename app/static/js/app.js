@@ -588,10 +588,15 @@ function renderResources(resources) {
 
 function renderBudgetLinks(links) {
   const body = $("budget-links-body");
+  const mobile = $("budget-links-mobile");
   if (!links.length) {
     body.innerHTML = `<tr><td colspan="7" class="empty">No budget-linked stories yet—try Refresh sources.</td></tr>`;
+    if (mobile) {
+      mobile.innerHTML = `<li class="empty">No budget-linked stories yet—try Refresh sources.</li>`;
+    }
     return;
   }
+
   body.innerHTML = links
     .map((row) => {
       const amount =
@@ -606,14 +611,51 @@ function renderBudgetLinks(links) {
         row.budget_relevance > 0 ? `${Math.round(row.budget_relevance * 100)}%` : "—";
       return `
         <tr>
-          <td data-label="Budget category" class="category">${escapeHtml(row.budget_category)}</td>
-          <td data-label="Adopted amount" class="amount">${escapeHtml(amount)}</td>
-          <td data-label="Story"><a href="${escapeHtml(row.story_url)}" target="_blank" rel="noopener">${escapeHtml(row.story_title)}</a></td>
-          <td data-label="Mentioned $" class="amount">${escapeHtml(mentioned)}</td>
-          <td data-label="Source">${escapeHtml(source)}</td>
-          <td data-label="Relevance">${escapeHtml(relevance)}</td>
-          <td data-label="When">${formatDate(row.published_at)}</td>
+          <td class="category">${escapeHtml(row.budget_category)}</td>
+          <td class="amount">${escapeHtml(amount)}</td>
+          <td>
+            <a class="story-table-link" href="${escapeHtml(row.story_url)}" target="_blank" rel="noopener">
+              ${escapeHtml(row.story_title)}
+              <span class="story-table-link-hint">Open story ↗</span>
+            </a>
+          </td>
+          <td class="amount">${escapeHtml(mentioned)}</td>
+          <td>${escapeHtml(source)}</td>
+          <td>${escapeHtml(relevance)}</td>
+          <td>${formatDate(row.published_at)}</td>
         </tr>`;
+    })
+    .join("");
+
+  if (!mobile) return;
+  mobile.innerHTML = links
+    .map((row) => {
+      const amount =
+        row.budget_amount != null
+          ? `${money.format(row.budget_amount)}${
+              row.budget_share != null ? ` · ${row.budget_share}% of GF` : ""
+            }`
+          : "Budget amount unavailable";
+      const mentioned = row.mentioned_money || "None found";
+      const source = row.source_name || (row.is_official ? "Official" : "News");
+      const relevance =
+        row.budget_relevance > 0 ? `${Math.round(row.budget_relevance * 100)}%` : "—";
+      return `
+        <li class="news-link-card">
+          <div class="news-link-card-top">
+            <span class="topic-chip">${escapeHtml(row.budget_category)}</span>
+            <span class="topic-chip">${escapeHtml(source)}</span>
+          </div>
+          <h3 class="news-link-title">${escapeHtml(row.story_title)}</h3>
+          <div class="news-link-meta">
+            <div><strong>Adopted:</strong> ${escapeHtml(amount)}</div>
+            <div><strong>Mentioned $:</strong> ${escapeHtml(mentioned)}</div>
+            <div><strong>Relevance:</strong> ${escapeHtml(relevance)} · ${formatDate(row.published_at)}</div>
+          </div>
+          <a class="news-link-open" href="${escapeHtml(row.story_url)}" target="_blank" rel="noopener">
+            Open story
+          </a>
+        </li>`;
     })
     .join("");
 }
