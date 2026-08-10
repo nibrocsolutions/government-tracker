@@ -286,6 +286,128 @@ main,
   background: rgba(255, 255, 255, 0.55);
 }
 
+.links-table.compact-table {
+  min-width: 640px;
+}
+
+.destination-cards {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0.75rem;
+}
+
+.destination-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.9), rgba(243, 240, 232, 0.72));
+}
+
+.destination-card.is-total {
+  border-color: rgba(10, 69, 72, 0.3);
+  background: linear-gradient(165deg, rgba(10, 69, 72, 0.12), rgba(255, 255, 255, 0.75));
+}
+
+.destination-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.destination-rank {
+  flex: 0 0 auto;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--sea-deep);
+  background: rgba(15, 106, 106, 0.12);
+}
+
+.destination-card.is-total .destination-rank {
+  width: auto;
+  padding: 0 0.55rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.destination-name {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  line-height: 1.25;
+  color: var(--sea-deep);
+}
+
+.destination-yoy {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(58, 82, 96, 0.1);
+  color: var(--ink-soft);
+}
+
+.destination-yoy.is-up {
+  background: rgba(15, 106, 106, 0.14);
+  color: var(--sea-deep);
+}
+
+.destination-yoy.is-down {
+  background: rgba(196, 92, 62, 0.14);
+  color: var(--coral);
+}
+
+.destination-amount {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.destination-share-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.destination-bar {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(19, 37, 47, 0.08);
+  overflow: hidden;
+}
+
+.destination-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--sea-deep), var(--foam));
+  max-width: 100%;
+}
+
+.destination-card.is-total .destination-bar > span {
+  background: linear-gradient(90deg, #6b4f1d, var(--sand));
+}
+
 .links-table th,
 .links-table td {
   padding: 0.75rem 0.9rem;
@@ -700,29 +822,29 @@ body.is-ready .panel {
     font-size: 1.15rem;
   }
 
-  /* Stack wide tables into readable cards on phones */
-  .table-scroll {
+  /* Budget↔news table becomes labeled cards; destinations use dedicated cards */
+  #budget-links-panel .table-scroll {
     border: none;
     overflow: visible;
   }
 
-  .links-table {
+  #budget-links-panel .links-table {
     min-width: 0;
     border-collapse: separate;
     border-spacing: 0;
     background: transparent;
   }
 
-  .links-table thead {
+  #budget-links-panel .links-table thead {
     display: none;
   }
 
-  .links-table tbody {
+  #budget-links-panel .links-table tbody {
     display: grid;
     gap: 0.7rem;
   }
 
-  .links-table tr {
+  #budget-links-panel .links-table tr {
     display: grid;
     gap: 0.45rem;
     padding: 0.85rem 0.9rem;
@@ -731,7 +853,7 @@ body.is-ready .panel {
     background: rgba(255, 255, 255, 0.72);
   }
 
-  .links-table td {
+  #budget-links-panel .links-table td {
     display: grid;
     grid-template-columns: minmax(6.5rem, 38%) 1fr;
     gap: 0.5rem;
@@ -740,7 +862,7 @@ body.is-ready .panel {
     font-size: 0.9rem;
   }
 
-  .links-table td::before {
+  #budget-links-panel .links-table td::before {
     content: attr(data-label);
     font-size: 0.72rem;
     font-weight: 700;
@@ -750,13 +872,21 @@ body.is-ready .panel {
     padding-top: 0.15rem;
   }
 
-  .links-table .totals-row {
+  #budget-links-panel .links-table .totals-row {
     border: 1px solid rgba(10, 69, 72, 0.28);
     background: rgba(10, 69, 72, 0.1);
   }
 
-  .links-table .amount {
+  #budget-links-panel .links-table .amount {
     white-space: normal;
+  }
+
+  .destinations-desktop {
+    display: none;
+  }
+
+  .destination-cards {
+    display: grid;
   }
 
   .story-item,
@@ -806,8 +936,16 @@ body.is-ready .panel {
     height: 250px;
   }
 
-  .links-table td {
+  #budget-links-panel .links-table td {
     grid-template-columns: 1fr;
     gap: 0.15rem;
+  }
+
+  .destination-amount {
+    font-size: 1.3rem;
+  }
+
+  .destination-card-top {
+    flex-wrap: wrap;
   }
 }
